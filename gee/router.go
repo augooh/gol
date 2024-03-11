@@ -72,13 +72,18 @@ func (r *router) getRoute(method string, path string) (*node, map[string]string)
 }
 
 func (r *router) handle(c *Context) {
+	// 返回的 n 是找到的路由节点，params 是路径中提取的参数。f
 	n, params := r.getRoute(c.Method, c.Path)
+
+	// 如果找到匹配的路由节点 n，则创建一个唯一标识该路由的 key（由请求方法和路由模式构成）。
 	if n != nil {
+		key := c.Method + "-" + n.pattern
 		c.Params = params
-		key := c.Method + "-" + c.Path
-		// 在一个 web 框架或路由处理器中，根据键 key 从注册的路由处理函数中选择并执行特定的处理函数。
-		r.handlers[key](c)
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
-		c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		})
 	}
+	c.Next()
 }
